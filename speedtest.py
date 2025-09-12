@@ -2,18 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright 2012 Matt Martz
 # All Rights Reserved.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Modified by NoReplyUI5 for fun ig
 
 import csv
 import datetime
@@ -28,6 +17,32 @@ import sys
 import threading
 import timeit
 import xml.parsers.expat
+
+try:
+    from rich.console import Console
+    from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+    from rich.table import Table
+    from rich.panel import Panel
+    from rich.text import Text
+    from rich import box
+    RICH_AVAILABLE = True
+except ImportError:
+    print("rich is not installed. Attempting to install it...")
+    try:
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "rich"])
+        from rich.console import Console
+        from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, TransferSpeedColumn
+        from rich.table import Table
+        from rich.panel import Panel
+        from rich.text import Text
+        from rich import box
+        RICH_AVAILABLE = True
+        print("rich installed successfully.")
+    except Exception:
+        print("Could not install rich. Proceeding without it.")
+        RICH_AVAILABLE = False
+
 
 try:
     import gzip
@@ -587,12 +602,13 @@ def build_opener(source_address=None, timeout=10):
     `User-Agent`
     """
 
-    printer('Timeout set to %d' % timeout, debug=True)
+    if DEBUG:
+        print_('Timeout set to %d' % timeout)
 
     if source_address:
         source_address_tuple = (source_address, 0)
-        printer('Binding to source address: %r' % (source_address_tuple,),
-                debug=True)
+        if DEBUG:
+            print_('Binding to source address: %r' % (source_address_tuple,))
     else:
         source_address_tuple = None
 
@@ -684,7 +700,8 @@ def build_user_agent():
         'speedtest-cli/%s' % __version__
     )
     user_agent = ' '.join(ua_tuple)
-    printer('User-Agent: %s' % user_agent, debug=True)
+    if DEBUG:
+        print_('User-Agent: %s' % user_agent)
     return user_agent
 
 
@@ -718,8 +735,8 @@ def build_request(url, data=None, headers=None, bump='0', secure=False):
         'Cache-Control': 'no-cache',
     })
 
-    printer('%s %s' % (('GET', 'POST')[bool(data)], final_url),
-            debug=True)
+    if DEBUG:
+        print_('%s %s' % (('GET', 'POST')[bool(data)], final_url))
 
     return Request(final_url, data=data, headers=headers)
 
@@ -738,7 +755,8 @@ def catch_request(request, opener=None):
     try:
         uh = _open(request)
         if request.get_full_url() != uh.geturl():
-            printer('Redirected to %s' % uh.geturl(), debug=True)
+            if DEBUG:
+                print_('Redirected to %s' % uh.geturl())
         return uh, False
     except HTTP_ERRORS:
         e = get_exception()
@@ -773,19 +791,11 @@ def get_attributes_by_tag_name(dom, tag_name):
     return dict(list(elem.attributes.items()))
 
 
-def print_dots(shutdown_event):
-    """Built in callback function used by Thread classes for printing
-    status
-    """
-    def inner(current, total, start=False, end=False):
-        if event_is_set(shutdown_event):
-            return
-
-        sys.stdout.write('.')
-        if current + 1 == total and end is True:
-            sys.stdout.write('\n')
-        sys.stdout.flush()
-    return inner
+def create_callback(progress, task):
+    """Create a callback function for progress updates."""
+    def callback(current, total, start=False, end=False):
+        progress.update(task, completed=current, total=total)
+    return callback
 
 
 def do_nothing(*args, **kwargs):
@@ -1153,7 +1163,8 @@ class Speedtest(object):
 
         configxml = ''.encode().join(configxml_list)
 
-        printer('Config XML:\n%s' % configxml, debug=True)
+        if DEBUG:
+            print_('Config XML:\n%s' % configxml)
 
         try:
             try:
@@ -1233,7 +1244,8 @@ class Speedtest(object):
                 (client.get('lat'), client.get('lon'))
             )
 
-        printer('Config:\n%r' % self.config, debug=True)
+        if DEBUG:
+            print_('Config:\n%r' % self.config)
 
         return self.config
 
@@ -1302,7 +1314,8 @@ class Speedtest(object):
 
                 serversxml = ''.encode().join(serversxml_list)
 
-                printer('Servers XML:\n%s' % serversxml, debug=True)
+                if DEBUG:
+                    print_('Servers XML:\n%s' % serversxml)
 
                 try:
                     try:
@@ -1434,7 +1447,8 @@ class Speedtest(object):
                 continue
             break
 
-        printer('Closest Servers:\n%r' % self.closest, debug=True)
+        if DEBUG:
+            print_('Closest Servers:\n%r' % self.closest)
         return self.closest
 
     def get_best_server(self, servers=None):
@@ -1462,8 +1476,8 @@ class Speedtest(object):
             latency_url = '%s/latency.txt?x=%s' % (url, stamp)
             for i in range(0, 3):
                 this_latency_url = '%s.%s' % (latency_url, i)
-                printer('%s %s' % ('GET', this_latency_url),
-                        debug=True)
+                if DEBUG:
+                    print_('%s %s' % ('GET', this_latency_url))
                 urlparts = urlparse(latency_url)
                 try:
                     if urlparts[0] == 'https':
@@ -1484,7 +1498,8 @@ class Speedtest(object):
                     total = (timeit.default_timer() - start)
                 except HTTP_ERRORS:
                     e = get_exception()
-                    printer('ERROR: %r' % e, debug=True)
+                    if DEBUG:
+                        print_('ERROR: %r' % e)
                     cum.append(3600)
                     continue
 
@@ -1501,8 +1516,7 @@ class Speedtest(object):
         try:
             fastest = sorted(results.keys())[0]
         except IndexError:
-            raise SpeedtestBestServerFailure('Unable to connect to servers to '
-                                             'test latency.')
+            raise SpeedtestBestServerFailure('Unable to connect to servers to test latency.')
         best = results[fastest]
         best['latency'] = fastest
 
@@ -1510,7 +1524,8 @@ class Speedtest(object):
         self.results.server = best
 
         self._best.update(best)
-        printer('Best Server:\n%r' % best, debug=True)
+        if DEBUG:
+            print_('Best Server:\n%r' % best)
         return best
 
     def download(self, callback=do_nothing, threads=None):
@@ -1563,7 +1578,7 @@ class Speedtest(object):
                     thread.join(timeout=0.001)
                 in_flight['threads'] -= 1
                 finished.append(sum(thread.result))
-                callback(thread.i, request_count, end=True)
+                callback(len(finished), request_count, end=True)
 
         q = Queue(max_threads)
         prod_thread = threading.Thread(target=producer,
@@ -1657,7 +1672,7 @@ class Speedtest(object):
                     thread.join(timeout=0.001)
                 in_flight['threads'] -= 1
                 finished.append(thread.result)
-                callback(thread.i, request_count, end=True)
+                callback(len(finished), request_count, end=True)
 
         q = Queue(threads or self.config['threads']['upload'])
         prod_thread = threading.Thread(target=producer,
@@ -1687,7 +1702,7 @@ def ctrl_c(shutdown_event):
     """
     def inner(signum, frame):
         shutdown_event.set()
-        printer('\nCancelling...', error=True)
+        print_('\nCancelling...', file=sys.stderr)
         sys.exit(0)
     return inner
 
@@ -1695,15 +1710,15 @@ def ctrl_c(shutdown_event):
 def version():
     """Print the version"""
 
-    printer('speedtest-cli %s' % __version__)
-    printer('Python %s' % sys.version.replace('\n', ''))
+    print_('speedtest-cli %s' % __version__)
+    print_('Python %s' % sys.version.replace('\n', ''))
     sys.exit(0)
 
 
 def csv_header(delimiter=','):
     """Print the CSV Headers"""
 
-    printer(SpeedtestResults.csv_header(delimiter=delimiter))
+    print_(SpeedtestResults.csv_header(delimiter=delimiter))
     sys.exit(0)
 
 
@@ -1811,25 +1826,7 @@ def validate_optional_args(args):
                              'unavailable' % (info[0], arg))
 
 
-def printer(string, quiet=False, debug=False, error=False, **kwargs):
-    """Helper function print a string with various features"""
 
-    if debug and not DEBUG:
-        return
-
-    if debug:
-        if sys.stdout.isatty():
-            out = '\033[1;30mDEBUG: %s\033[0m' % string
-        else:
-            out = 'DEBUG: %s' % string
-    else:
-        out = string
-
-    if error:
-        kwargs['file'] = sys.stderr
-
-    if not quiet:
-        print_(out, **kwargs)
 
 
 def shell():
@@ -1847,8 +1844,7 @@ def shell():
         version()
 
     if not args.download and not args.upload:
-        raise SpeedtestCLIError('Cannot supply both --no-download and '
-                                '--no-upload')
+        raise SpeedtestCLIError('Cannot supply both --no-download and --no-upload')
 
     if len(args.csv_delimiter) != 1:
         raise SpeedtestCLIError('--csv-delimiter must be a single character')
@@ -1869,18 +1865,39 @@ def shell():
     else:
         quiet = False
 
-    if args.csv or args.json:
-        machine_format = True
+    if RICH_AVAILABLE and not quiet:
+        console = Console()
     else:
-        machine_format = False
+        console = None
 
-    # Don't set a callback if we are running quietly
-    if quiet or debug:
-        callback = do_nothing
-    else:
-        callback = print_dots(shutdown_event)
+    def printer(string, quiet=False, debug=False, error=False, **kwargs):
+        if debug and not DEBUG:
+            return
 
-    printer('Retrieving speedtest.net configuration...', quiet)
+        if quiet:
+            return
+
+        if console:
+            if debug:
+                console.print(f"[bold dim]DEBUG: {string}[/bold dim]")
+            elif error:
+                console.print(f"[bold red]ERROR: {string}[/bold red]")
+            else:
+                console.print(string, **kwargs)
+        else:
+            if debug:
+                if sys.stdout.isatty():
+                    out = '\033[1;30mDEBUG: %s\033[0m' % string
+                else:
+                    out = 'DEBUG: %s' % string
+            else:
+                out = string
+
+            if error:
+                kwargs['file'] = sys.stderr
+
+            print_(out, **kwargs)
+
     try:
         speedtest = Speedtest(
             source_address=args.source,
@@ -1898,16 +1915,34 @@ def shell():
             printer('Cannot retrieve speedtest server list', error=True)
             raise SpeedtestCLIError(get_exception())
 
-        for _, servers in sorted(speedtest.servers.items()):
-            for server in servers:
-                line = ('%(id)5s) %(sponsor)s (%(name)s, %(country)s) '
-                        '[%(d)0.2f km]' % server)
-                try:
-                    printer(line)
-                except IOError:
-                    e = get_exception()
-                    if e.errno != errno.EPIPE:
-                        raise
+        if console:
+            table = Table(show_header=True, header_style="bold magenta")
+            table.add_column("ID")
+            table.add_column("Sponsor")
+            table.add_column("Server Name")
+            table.add_column("Country")
+            table.add_column("Distance")
+            for _, servers in sorted(speedtest.servers.items()):
+                for server in servers:
+                    table.add_row(
+                        server['id'],
+                        server['sponsor'],
+                        server['name'],
+                        server['country'],
+                        f"{server['d']:.2f} km"
+                    )
+            console.print(table)
+        else:
+            for _, servers in sorted(speedtest.servers.items()):
+                for server in servers:
+                    line = ('%(id)5s) %(sponsor)s (%(name)s, %(country)s) '
+                            '[%(d)0.2f km]' % server)
+                    try:
+                        printer(line)
+                    except IOError:
+                        e = get_exception()
+                        if e.errno != errno.EPIPE:
+                            raise
         sys.exit(0)
 
     printer('Testing from %(isp)s (%(ip)s)...' % speedtest.config['client'],
@@ -1945,68 +1980,95 @@ def shell():
             '%(latency)s ms' % results.server, quiet)
 
     if args.download:
-        printer('Testing download speed', quiet,
-                end=('', '\n')[bool(debug)])
-        speedtest.download(
-            callback=callback,
-            threads=(None, 1)[args.single]
-        )
+        printer('Testing download speed', quiet)
+        if console:
+            with Progress(
+                TextColumn("[bold blue]{task.description}", justify="right"),
+                BarColumn(bar_width=None),
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                "•",
+                TransferSpeedColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Download", total=None)
+                speedtest.download(
+                    callback=create_callback(progress, task),
+                    threads=(None, 1)[args.single]
+                )
+        else:
+            speedtest.download(callback=do_nothing)
+
+    if args.upload:
+        printer('Testing upload speed', quiet)
+        if console:
+            with Progress(
+                TextColumn("[bold blue]{task.description}", justify="right"),
+                BarColumn(bar_width=None),
+                "[progress.percentage]{task.percentage:>3.0f}%",
+                "•",
+                TransferSpeedColumn(),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Upload", total=None)
+                speedtest.upload(
+                    callback=create_callback(progress, task),
+                    pre_allocate=args.pre_allocate,
+                    threads=(None, 1)[args.single]
+                )
+        else:
+            speedtest.upload(callback=do_nothing)
+
+    printer('Results:', quiet)
+    if console:
+        client = speedtest.config['client']
+        server = results.server
+
+        title = Text("Speedtest Results", justify="center", style="bold blue")
+        
+        table = Table(show_header=False, box=box.ROUNDED, padding=(0, 1))
+        table.add_column(style="cyan")
+        table.add_column(style="magenta")
+
+        table.add_row("ISP", client['isp'])
+        table.add_row("IP", client['ip'])
+        table.add_row("Server", f"{server['sponsor']} ({server['name']}, {server['country']})")
+        table.add_row("Distance", f"{server['d']:.2f} km")
+        table.add_row("Ping", f"{results.ping:.2f} ms")
+        table.add_row("Download", f"{results.download / 10**6:.2f} Mbit/s")
+        table.add_row("Upload", f"{results.upload / 10**6:.2f} Mbit/s")
+
+        panel = Panel(table, title=title, border_style="green")
+        console.print(panel)
+    else:
+        printer('Ping: %s ms' % results.ping, quiet)
         printer('Download: %0.2f M%s/s' %
                 ((results.download / 1000.0 / 1000.0) / args.units[1],
                  args.units[0]),
                 quiet)
-    else:
-        printer('Skipping download test', quiet)
-
-    if args.upload:
-        printer('Testing upload speed', quiet,
-                end=('', '\n')[bool(debug)])
-        speedtest.upload(
-            callback=callback,
-            pre_allocate=args.pre_allocate,
-            threads=(None, 1)[args.single]
-        )
         printer('Upload: %0.2f M%s/s' %
                 ((results.upload / 1000.0 / 1000.0) / args.units[1],
                  args.units[0]),
                 quiet)
-    else:
-        printer('Skipping upload test', quiet)
 
-    printer('Results:\n%r' % results.dict(), debug=True)
-
-    if not args.simple and args.share:
+    if args.share:
+        printer('Sharing results...', quiet)
         results.share()
-
-    if args.simple:
-        printer('Ping: %s ms\nDownload: %0.2f M%s/s\nUpload: %0.2f M%s/s' %
-                (results.ping,
-                 (results.download / 1000.0 / 1000.0) / args.units[1],
-                 args.units[0],
-                 (results.upload / 1000.0 / 1000.0) / args.units[1],
-                 args.units[0]))
-    elif args.csv:
-        printer(results.csv(delimiter=args.csv_delimiter))
-    elif args.json:
-        printer(results.json())
-
-    if args.share and not machine_format:
-        printer('Share results: %s' % results.share())
+        printer('Share results: %s' % results.share(), quiet)
 
 
 def main():
     try:
         shell()
     except KeyboardInterrupt:
-        printer('\nCancelling...', error=True)
-    except (SpeedtestException, SystemExit):
-        e = get_exception()
-        # Ignore a successful exit, or argparse exit
-        if getattr(e, 'code', 1) not in (0, 2):
-            msg = '%s' % e
-            if not msg:
-                msg = '%r' % e
-            raise SystemExit('ERROR: %s' % msg)
+        print_('\nCancelling...', file=sys.stderr)
+        sys.exit(1)
+    except (SpeedtestCLIError, SpeedtestException) as e:
+        if RICH_AVAILABLE:
+            console = Console()
+            console.print(f"[bold red]ERROR: {e}[/bold red]")
+        else:
+            print_('ERROR: %s' % e, file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == '__main__':
