@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "speedtest-cli"
+dynamic = ["version"]
+description = "Command line interface for testing internet bandwidth using speedtest.net"
+readme = "README.rst"
+license = {text = "Apache License, Version 2.0"}
+requires-python = ">=3.8"
+keywords = ["speedtest", "speedtest.net", "bandwidth", "internet"]
+authors = [
+    {name = "Matt Martz", email = "matt@sivel.net"},
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Environment :: Console",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.optional-dependencies]
+ui = ["rich>=10.0"]
+
+[project.scripts]
+speedtest = "speedtest:main"
+speedtest-cli = "speedtest:main"
+
+[project.urls]
+Homepage = "https://github.com/sivel/speedtest-cli"
+Repository = "https://github.com/SudeeptoBhakat/speedtest-cli"
+
+[tool.setuptools.dynamic]
+version = {attr = "speedtest.__version__"}
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
