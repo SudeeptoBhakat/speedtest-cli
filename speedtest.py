@@ -20,7 +20,6 @@ import re
 import signal
 import socket
 import ssl
-import statistics
 import sys
 import threading
 import timeit
@@ -50,7 +49,6 @@ try:
         Progress,
         BarColumn,
         TextColumn,
-        TimeRemainingColumn,
         TransferSpeedColumn,
     )
     from rich.table import Table
@@ -413,7 +411,7 @@ def catch_request(request, opener=None):
         uh = _open(request)
         if request.get_full_url() != uh.geturl():
             if DEBUG:
-                print_("Redirected to %s" % uh.geturl())
+                print("Redirected to %s" % uh.geturl())
         return uh, False
     except HTTP_ERRORS as e:
         return None, e
